@@ -1,0 +1,8 @@
+{
+  "name": "Remix Roblox UV Armor: Classic Template Stripper \u0026 Asset Cleaner",
+  "description": "Deterministic Roblox 585x559 UV template stripper, watermark eraser, asset cleaner, and real-time 3D R6 avatar inspector.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
