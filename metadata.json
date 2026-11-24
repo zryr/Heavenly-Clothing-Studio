@@ -1,6 +1,6 @@
 {
-  "name": "Remix Roblox UV Armor: Classic Template Stripper \u0026 Asset Cleaner",
-  "description": "Deterministic Roblox 585x559 UV template stripper, watermark eraser, asset cleaner, and real-time 3D R6 avatar inspector.",
+  "name": "Heavenly Clothing Studio",
+  "description": "Roblox Classic Clothing Editor & 3D Previewer — Create. Refine. Preview. Edit, clean, align, and preview Classic Shirts, Pants, and T-Shirts in 2D and 3D.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

@@ -1,334 +1,369 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Download, Copy, Check, Sparkles, Image as ImageIcon } from 'lucide-react';
-import { TemplateType, UvIsland, TEMPLATE_WIDTH, TEMPLATE_HEIGHT } from '../types/uv';
+import { motion } from 'motion/react';
+import { Download, X } from 'lucide-react';
+import { TemplateType, UvIsland, getTemplateSpec } from '../types/uv';
 
-interface Props {
-  isOpen: boolean;
-  onClose: () => void;
-  sourceCanvas: HTMLCanvasElement | null;
+interface Showcase2DModalProps {
+  sourceCanvas: HTMLCanvasElement;
   templateType: TemplateType;
   islands: UvIsland[];
   skinColor: string;
+  tshirtBaseColor: string;
+  projectName: string;
+  onClose: () => void;
 }
 
-export const Showcase2DModal: React.FC<Props> = ({
-  isOpen,
-  onClose,
+type CardTheme = 'heavenly' | 'slate' | 'obsidian';
+
+const CARD_THEMES: Record<
+  CardTheme,
+  {
+    label: string;
+    bgTop: string;
+    bgBot: string;
+    text: string;
+    muted: string;
+    accent: string;
+    lightGrid: boolean;
+  }
+> = {
+  heavenly: {
+    label: 'Heavenly Sky',
+    bgTop: '#F5FAFF',
+    bgBot: '#DBEAFE',
+    text: '#0F172A',
+    muted: '#475569',
+    accent: '#0284C7',
+    lightGrid: true
+  },
+  slate: {
+    label: 'Studio Slate',
+    bgTop: '#0F172A',
+    bgBot: '#1E293B',
+    text: '#F8FAFC',
+    muted: '#CBD5E1',
+    accent: '#38BDF8',
+    lightGrid: false
+  },
+  obsidian: {
+    label: 'Obsidian',
+    bgTop: '#030712',
+    bgBot: '#0B1120',
+    text: '#F8FAFC',
+    muted: '#94A3B8',
+    accent: '#38BDF8',
+    lightGrid: false
+  }
+};
+
+export const Showcase2DModal: React.FC<Showcase2DModalProps> = ({
   sourceCanvas,
   templateType,
   islands,
-  skinColor
+  skinColor,
+  tshirtBaseColor,
+  projectName,
+  onClose
 }) => {
-  const showcaseCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [copied, setCopied] = useState<boolean>(false);
-  const [watermarkText, setWatermarkText] = useState<string>('UV ARMOR');
+  const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const spec = getTemplateSpec(templateType);
 
-  // Helper to find island rect
-  const getIsland = (nameKeyword: string, fallback: { x: number; y: number; w: number; h: number }) => {
-    const match = islands.find((i) => i.name.toLowerCase().includes(nameKeyword.toLowerCase()));
-    return match ? { x: match.x, y: match.y, w: match.w, h: match.h } : fallback;
-  };
+  const [title, setTitle] = useState(projectName || spec.label);
+  const [brandTag, setBrandTag] = useState('HEAVENLY');
+  const [theme, setTheme] = useState<CardTheme>('heavenly');
+  const [showWatermark, setShowWatermark] = useState(true);
 
   useEffect(() => {
-    if (!isOpen || !showcaseCanvasRef.current) return;
-    const canvas = showcaseCanvasRef.current;
+    const canvas = previewCanvasRef.current;
+    if (!canvas) return;
+    const W = 1200;
+    const H = 800;
+    canvas.width = W;
+    canvas.height = H;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Dimensions for showcase presentation: 820 x 480
-    const W = 820;
-    const H = 480;
-    canvas.width = W;
-    canvas.height = H;
-
-    // Dark sleek backdrop with subtle studio gradient
-    const bgGradient = ctx.createLinearGradient(0, 0, 0, H);
-    bgGradient.addColorStop(0, '#0d1017');
-    bgGradient.addColorStop(1, '#080a0f');
-    ctx.fillStyle = bgGradient;
+    const t = CARD_THEMES[theme];
+    const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+    bgGrad.addColorStop(0, t.bgTop);
+    bgGrad.addColorStop(1, t.bgBot);
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, W, H);
 
-    // Subtle grid/dots
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-    for (let x = 20; x < W; x += 30) {
-      for (let y = 20; y < H; y += 30) {
-        ctx.fillRect(x, y, 1.5, 1.5);
-      }
+    ctx.strokeStyle = t.lightGrid ? 'rgba(2,132,199,0.06)' : 'rgba(148,163,184,0.06)';
+    ctx.lineWidth = 1;
+    for (let x = 40; x < W; x += 40) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+    for (let y = 40; y < H; y += 40) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
     }
 
-    // Source canvas image or fallback
-    const src = sourceCanvas;
+    ctx.fillStyle = t.accent;
+    ctx.font = '600 16px "JetBrains Mono", monospace';
+    ctx.fillText(`HEAVENLY CLOTHING STUDIO · ${spec.label.toUpperCase()}`, 64, 72);
 
-    // Island definitions
-    const torsoFront = getIsland('Torso Front', { x: 230, y: 75, w: 128, h: 128 });
-    const torsoBack = getIsland('Torso Back', { x: 422, y: 75, w: 128, h: 128 });
-    const rightArmFront = getIsland('Right Arm Front', { x: 87, y: 358, w: 64, h: 128 });
-    const leftArmFront = getIsland('Left Arm Front', { x: 371, y: 357, w: 64, h: 128 });
-    const rightLegFront = getIsland('Right Leg Front', { x: 87, y: 358, w: 64, h: 128 });
-    const leftLegFront = getIsland('Left Leg Front', { x: 371, y: 357, w: 64, h: 128 });
-    const rightLegBack = getIsland('Right Leg Back', { x: 215, y: 358, w: 64, h: 128 });
-    const leftLegBack = getIsland('Left Leg Back', { x: 499, y: 357, w: 64, h: 128 });
+    ctx.fillStyle = t.text;
+    ctx.font = '700 44px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText(title || spec.label, 64, 128);
 
-    // Card drawing helper with rounded corners & shadow
-    const drawCard = (x: number, y: number, w: number, h: number, label: string) => {
-      ctx.save();
-      // Drop shadow
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-      ctx.shadowBlur = 18;
-      ctx.shadowOffsetY = 6;
-
-      // Base skin/card background
-      ctx.fillStyle = skinColor;
-      ctx.beginPath();
-      ctx.roundRect(x, y, w, h, 8);
-      ctx.fill();
-
-      // Border outline
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.restore();
-
-      // Label at bottom
-      ctx.fillStyle = '#64748b';
-      ctx.font = '600 10px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(label, x + w / 2, y + h + 18);
-    };
-
-    // Draw textured piece
-    const drawTexture = (
-      sx: number,
-      sy: number,
-      sw: number,
-      sh: number,
+    const drawCroppedIsland = (
+      islandName: string,
       dx: number,
       dy: number,
       dw: number,
-      dh: number,
-      radius = 0
+      dh: number
     ) => {
-      if (!src) return;
-      ctx.save();
-      if (radius > 0) {
-        ctx.beginPath();
-        ctx.roundRect(dx, dy, dw, dh, radius);
-        ctx.clip();
-      }
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(src, sx, sy, sw, sh, dx, dy, dw, dh);
-      ctx.restore();
+      const isl = islands.find((i) => i.name === islandName);
+      if (!isl) return;
+      ctx.fillStyle = skinColor;
+      ctx.fillRect(dx, dy, dw, dh);
+      ctx.drawImage(sourceCanvas, isl.x, isl.y, isl.w, isl.h, dx, dy, dw, dh);
+      ctx.strokeStyle = 'rgba(100, 116, 139, 0.25)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(dx, dy, dw, dh);
     };
 
-    // Layout configuration (matches Screenshot 2 showcase format):
-    // Left Arm: x: 50, w: 68, h: 250
-    // Front Figure (Torso + Legs): x: 148, w: 220, h: 250 (Torso 220x125, Legs 220x125)
-    // Back Figure (Torso + Legs): x: 398, w: 220, h: 250 (Torso 220x125, Legs 220x125)
-    // Right Arm: x: 648, w: 68, h: 250
-    const topY = 75;
-    const figureW = 220;
-    const armW = 70;
-    const figureH = 260;
-    const torsoH = 130;
-    const legsH = 130;
+    if (templateType === 'tshirt') {
+      const boxSize = 420;
+      const bx = (W - boxSize) / 2;
+      const by = 210;
 
-    // 1. LEFT ARM CARD (Viewer Left, Roblox Right Arm)
-    const leftArmX = 65;
-    drawCard(leftArmX, topY, armW, figureH, 'RIGHT ARM');
-    if (src) {
-      if (templateType === 'shirt') {
-        drawTexture(rightArmFront.x, rightArmFront.y, rightArmFront.w, rightArmFront.h, leftArmX, topY, armW, figureH, 8);
-      }
+      ctx.fillStyle = tshirtBaseColor;
+      ctx.beginPath();
+      ctx.roundRect(bx - 40, by - 24, boxSize + 80, boxSize + 48, 24);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(100, 116, 139, 0.25)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.drawImage(
+        sourceCanvas,
+        0,
+        0,
+        sourceCanvas.width,
+        sourceCanvas.height,
+        bx,
+        by,
+        boxSize,
+        boxSize
+      );
+
+      ctx.fillStyle = t.muted;
+      ctx.font = '600 14px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('FRONT CHEST GRAPHIC · 512 × 512 PX', W / 2, by + boxSize + 64);
+      ctx.textAlign = 'left';
+    } else if (templateType === 'shirt') {
+      const scale = 2.0;
+      const torsoW = 128 * scale;
+      const torsoH = 128 * scale;
+      const armW = 64 * scale;
+      const armH = 128 * scale;
+
+      const fX = 200;
+      const fY = 235;
+      drawCroppedIsland('Right Arm Front', fX - armW - 6, fY, armW, armH);
+      drawCroppedIsland('Torso Front', fX, fY, torsoW, torsoH);
+      drawCroppedIsland('Left Arm Front', fX + torsoW + 6, fY, armW, armH);
+
+      const bX = 740;
+      const bY = 235;
+      drawCroppedIsland('Left Arm Back', bX - armW - 6, bY, armW, armH);
+      drawCroppedIsland('Torso Back', bX, bY, torsoW, torsoH);
+      drawCroppedIsland('Right Arm Back', bX + torsoW + 6, bY, armW, armH);
+
+      ctx.fillStyle = t.muted;
+      ctx.font = '600 14px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('FRONT VIEW', fX + torsoW / 2, fY + torsoH + 42);
+      ctx.fillText('BACK VIEW', bX + torsoW / 2, bY + torsoH + 42);
+      ctx.textAlign = 'left';
+    } else {
+      const scale = 2.1;
+      const legW = 64 * scale;
+      const legH = 128 * scale;
+      const waistH = 56;
+
+      const fX = 220;
+      const fY = 220;
+      drawCroppedIsland('Torso Front', fX, fY, legW * 2 + 6, waistH);
+      drawCroppedIsland('Right Leg Front', fX, fY + waistH + 4, legW, legH);
+      drawCroppedIsland('Left Leg Front', fX + legW + 6, fY + waistH + 4, legW, legH);
+
+      const bX = 700;
+      const bY = 220;
+      drawCroppedIsland('Torso Back', bX, bY, legW * 2 + 6, waistH);
+      drawCroppedIsland('Left Leg Back', bX, bY + waistH + 4, legW, legH);
+      drawCroppedIsland('Right Leg Back', bX + legW + 6, bY + waistH + 4, legW, legH);
+
+      ctx.fillStyle = t.muted;
+      ctx.font = '600 14px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('FRONT VIEW', fX + legW + 3, fY + waistH + legH + 42);
+      ctx.fillText('BACK VIEW', bX + legW + 3, bY + waistH + legH + 42);
+      ctx.textAlign = 'left';
     }
 
-    // 2. FRONT FIGURE (Front Torso + Front Legs)
-    const frontX = 165;
-    drawCard(frontX, topY, figureW, figureH, 'FRONT VIEW');
-
-    // Torso Front piece
-    if (src) {
-      if (templateType === 'shirt') {
-        drawTexture(torsoFront.x, torsoFront.y, torsoFront.w, torsoFront.h, frontX, topY, figureW, torsoH, 6);
-      }
-      // Pants Front pieces (Right leg + Left leg)
-      if (templateType === 'pants') {
-        drawTexture(rightLegFront.x, rightLegFront.y, rightLegFront.w, rightLegFront.h, frontX, topY + torsoH, figureW / 2, legsH);
-        drawTexture(leftLegFront.x, leftLegFront.y, leftLegFront.w, leftLegFront.h, frontX + figureW / 2, topY + torsoH, figureW / 2, legsH);
-      }
+    if (showWatermark && brandTag.trim()) {
+      ctx.save();
+      ctx.translate(W / 2, H / 2);
+      ctx.rotate(-0.32);
+      ctx.fillStyle = t.lightGrid ? 'rgba(2,132,199,0.06)' : 'rgba(248,250,252,0.06)';
+      ctx.font = '700 68px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(brandTag.toUpperCase(), 0, -140);
+      ctx.fillText(brandTag.toUpperCase(), 0, 20);
+      ctx.fillText(brandTag.toUpperCase(), 0, 180);
+      ctx.restore();
     }
 
-    // Seam line between torso and legs
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(frontX, topY + torsoH);
-    ctx.lineTo(frontX + figureW, topY + torsoH);
-    ctx.stroke();
+    ctx.fillStyle = t.muted;
+    ctx.font = '500 13px "JetBrains Mono", monospace';
+    ctx.fillText(`${spec.width} × ${spec.height} PX CLASSIC TEMPLATE`, 64, H - 40);
+    ctx.textAlign = 'right';
+    ctx.fillText(
+      brandTag ? `${brandTag.toUpperCase()} · CREATE. REFINE. PREVIEW.` : 'CREATE. REFINE. PREVIEW.',
+      W - 64,
+      H - 40
+    );
+    ctx.textAlign = 'left';
+  }, [
+    sourceCanvas,
+    templateType,
+    islands,
+    skinColor,
+    tshirtBaseColor,
+    title,
+    brandTag,
+    theme,
+    showWatermark,
+    spec
+  ]);
 
-    // 3. BACK FIGURE (Back Torso + Back Legs)
-    const backX = 415;
-    drawCard(backX, topY, figureW, figureH, 'BACK VIEW');
-
-    // Torso Back piece
-    if (src) {
-      if (templateType === 'shirt') {
-        drawTexture(torsoBack.x, torsoBack.y, torsoBack.w, torsoBack.h, backX, topY, figureW, torsoH, 6);
-      }
-      // Pants Back pieces
-      if (templateType === 'pants') {
-        drawTexture(rightLegBack.x, rightLegBack.y, rightLegBack.w, rightLegBack.h, backX, topY + torsoH, figureW / 2, legsH);
-        drawTexture(leftLegBack.x, leftLegBack.y, leftLegBack.w, leftLegBack.h, backX + figureW / 2, topY + torsoH, figureW / 2, legsH);
-      }
-    }
-
-    // Seam line between torso and legs
-    ctx.beginPath();
-    ctx.moveTo(backX, topY + torsoH);
-    ctx.lineTo(backX + figureW, topY + torsoH);
-    ctx.stroke();
-
-    // 4. RIGHT ARM CARD (Viewer Right, Roblox Left Arm)
-    const rightArmX = 665;
-    drawCard(rightArmX, topY, armW, figureH, 'LEFT ARM');
-    if (src) {
-      if (templateType === 'shirt') {
-        drawTexture(leftArmFront.x, leftArmFront.y, leftArmFront.w, leftArmFront.h, rightArmX, topY, armW, figureH, 8);
-      }
-    }
-
-    // 5. Center Bottom Brand Emblem / Watermark Badge (matches Screenshot 2!)
-    const badgeX = W / 2 - 45;
-    const badgeY = topY + figureH - 25;
-    ctx.save();
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-    ctx.shadowBlur = 12;
-    ctx.fillStyle = '#0a0d14';
-    ctx.beginPath();
-    ctx.roundRect(badgeX, badgeY, 90, 48, 12);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(0, 229, 255, 0.35)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Little glowing moon/sparkle icon & brand text
-    ctx.fillStyle = '#fcd34d';
-    ctx.font = '16px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('🌙', W / 2, badgeY + 22);
-
-    ctx.fillStyle = '#00e5ff';
-    ctx.font = '700 9px monospace';
-    ctx.fillText(watermarkText.toUpperCase(), W / 2, badgeY + 38);
-    ctx.restore();
-
-    // Top Title in Canvas
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-    ctx.font = '700 13px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(`ROBLOX 2D SHOWCASE • ${templateType.toUpperCase()} TEMPLATE`, W / 2, 42);
-
-  }, [isOpen, sourceCanvas, templateType, islands, skinColor, watermarkText]);
-
-  if (!isOpen) return null;
-
-  const handleDownload = () => {
-    if (!showcaseCanvasRef.current) return;
-    const dataUrl = showcaseCanvasRef.current.toDataURL('image/png');
+  const handleDownloadCard = () => {
+    const canvas = previewCanvasRef.current;
+    if (!canvas) return;
+    const url = canvas.toDataURL('image/png');
     const a = document.createElement('a');
-    a.download = `Roblox_2D_Showcase_${templateType}_${Date.now()}.png`;
-    a.href = dataUrl;
+    a.href = url;
+    a.download = `${(title || 'Heavenly_Showcase').replace(/[^a-zA-Z0-9_-]/g, '_')}_Showcase.png`;
+    document.body.appendChild(a);
     a.click();
-  };
-
-  const handleCopy = async () => {
-    if (!showcaseCanvasRef.current) return;
-    try {
-      showcaseCanvasRef.current.toBlob(async (blob) => {
-        if (!blob) return;
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2500);
-      });
-    } catch {
-      // Fallback
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    document.body.removeChild(a);
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in"
-      onClick={onClose}
+      className="fixed inset-0 z-50 bg-black/55 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="showcase-modal-title"
     >
-      <div
-        className="relative w-full max-w-4xl bg-[#0e121b] border border-[#232936] rounded-2xl shadow-2xl overflow-hidden flex flex-col text-white"
-        onClick={(e) => e.stopPropagation()}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        className="w-full max-w-4xl bg-h-surface border border-h-border rounded-3xl shadow-[0_24px_64px_rgba(15,23,42,0.18)] overflow-hidden flex flex-col max-h-[92vh] text-h-text"
       >
-        {/* Modal Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#232936] bg-[#121622]">
-          <div className="flex items-center space-x-2">
-            <div className="p-1 rounded-lg bg-[#00e5ff]/15 text-[#00e5ff]">
-              <ImageIcon className="w-4 h-4" />
-            </div>
-            <h2 className="text-sm font-bold font-mono text-white tracking-wider">2D Showcase</h2>
+        <div className="px-5 py-4 border-b border-h-border-soft bg-h-surface-2 flex items-center justify-between">
+          <div>
+            <h2 id="showcase-modal-title" className="font-display text-lg font-bold text-h-text">
+              2D Showcase Card
+            </h2>
+            <p className="text-xs text-h-muted">
+              Export a 1200 × 800 presentation card with optional creator watermark.
+            </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 text-[#94a3b8] hover:text-white hover:bg-[#1a2130] rounded-lg transition"
+            className="p-1.5 rounded-xl text-h-muted hover:text-h-text hover:bg-h-surface-3 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Canvas Display View */}
-        <div className="p-3 sm:p-4 flex flex-col items-center justify-center bg-[#090b10] overflow-x-auto">
-          <canvas
-            ref={showcaseCanvasRef}
-            className="rounded-xl shadow-2xl border border-[#1f2838] max-w-full h-auto"
-            style={{ width: '100%', maxWidth: '820px' }}
-          />
-        </div>
+        <div className="p-5 overflow-y-auto space-y-4">
+          <div className="rounded-2xl border border-h-border overflow-hidden bg-h-canvas">
+            <canvas ref={previewCanvasRef} className="w-full h-auto block" />
+          </div>
 
-        {/* Footer Actions */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 px-4 py-3 border-t border-[#232936] bg-[#121622] text-xs">
-          <div className="flex items-center space-x-2">
-            <span className="text-[#64748b] font-mono text-[11px]">Brand Tag:</span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <label className="space-y-1">
+              <span className="text-[11px] font-medium text-h-muted">Garment Title</span>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full h-9 px-3 rounded-xl bg-h-surface-2 border border-h-border text-xs text-h-text focus:border-h-accent focus:outline-none"
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-[11px] font-medium text-h-muted">Creator Tag</span>
+              <input
+                type="text"
+                value={brandTag}
+                onChange={(e) => setBrandTag(e.target.value)}
+                className="w-full h-9 px-3 rounded-xl bg-h-surface-2 border border-h-border text-xs text-h-text focus:border-h-accent focus:outline-none"
+              />
+            </label>
+            <div className="space-y-1">
+              <span className="text-[11px] font-medium text-h-muted">Card Theme</span>
+              <div className="grid grid-cols-3 gap-1.5">
+                {(['heavenly', 'slate', 'obsidian'] as CardTheme[]).map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setTheme(id)}
+                    className={`h-9 rounded-xl text-[11px] font-semibold border cursor-pointer ${
+                      theme === id
+                        ? 'bg-h-accent-soft border-h-accent-border text-h-accent-text'
+                        : 'bg-h-surface-2 border-h-border text-h-text-2'
+                    }`}
+                  >
+                    {id === 'heavenly' ? 'Sky' : id === 'slate' ? 'Slate' : 'Dark'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <label className="inline-flex items-center gap-2 text-xs font-medium text-h-text-2 cursor-pointer">
             <input
-              type="text"
-              value={watermarkText}
-              onChange={(e) => setWatermarkText(e.target.value)}
-              className="bg-[#181e2b] border border-[#263145] rounded-lg px-2.5 py-1 text-xs font-mono text-white focus:outline-none focus:border-[#00e5ff] w-32"
-              placeholder="Brand Tag"
+              type="checkbox"
+              checked={showWatermark}
+              onChange={(e) => setShowWatermark(e.target.checked)}
+              className="accent-h-accent cursor-pointer"
             />
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={handleCopy}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#181e2b] hover:bg-[#232b3d] border border-[#2b374c] text-white font-mono transition"
-            >
-              {copied ? <Check className="w-3.5 h-3.5 text-[#10b981]" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? 'Copied Image!' : 'Copy Image'}</span>
-            </button>
-
-            <button
-              onClick={handleDownload}
-              className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#00e5ff] to-[#38bdf8] hover:brightness-110 text-black font-mono font-bold transition shadow-lg shadow-[#00e5ff]/20"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Download 2D Showcase</span>
-            </button>
-
-            <button
-              onClick={onClose}
-              className="px-4 py-1.5 rounded-lg bg-[#1a2130] hover:bg-[#263044] text-[#cbd5e1] font-mono font-semibold transition"
-            >
-              Close
-            </button>
-          </div>
+            Include subtle diagonal creator watermark
+          </label>
         </div>
-      </div>
+
+        <div className="px-5 py-3.5 border-t border-h-border-soft bg-h-surface-2 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl bg-h-surface hover:bg-h-surface-3 border border-h-border text-xs font-semibold text-h-text-2 cursor-pointer"
+          >
+            Close
+          </button>
+          <button
+            type="button"
+            onClick={handleDownloadCard}
+            className="px-4 py-2 rounded-xl bg-h-accent hover:bg-h-accent-hover text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Download 1200×800 PNG
+          </button>
+        </div>
+      </motion.div>
     </div>
   );
 };

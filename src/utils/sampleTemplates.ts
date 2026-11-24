@@ -1,335 +1,436 @@
-import { TEMPLATE_WIDTH, TEMPLATE_HEIGHT, ROBLOX_SHIRT_UV_ISLANDS } from '../types/uv';
+import {
+  ROBLOX_PANTS_UV_ISLANDS,
+  ROBLOX_SHIRT_UV_ISLANDS,
+  TEMPLATE_HEIGHT,
+  TEMPLATE_WIDTH,
+  TSHIRT_SIZE,
+  TemplateType
+} from '../types/uv';
 
-export interface SampleTemplate {
+export interface SampleTemplateSpec {
   id: string;
   name: string;
-  category: 'Shirt' | 'Pants';
   description: string;
-  hasWatermarkInDeadSpace: boolean;
-  hasWatermarkInsideUV: boolean;
-  thumbnailColor: string;
-  generate: () => HTMLCanvasElement;
+  type: TemplateType;
+  renderToCanvas: () => HTMLCanvasElement;
 }
 
-export const SAMPLE_TEMPLATES: SampleTemplate[] = [
-  {
-    id: 'cyber-hoodie',
-    name: 'Cyberpunk Tech Hoodie (Heavy Watermarks)',
-    category: 'Shirt',
-    description: 'Realistic designer showcase with dead-space skulls, typography watermarks, and a torso tag.',
-    hasWatermarkInDeadSpace: true,
-    hasWatermarkInsideUV: true,
-    thumbnailColor: '#00e5ff',
-    generate: () => generateCyberHoodieTemplate()
-  },
-  {
-    id: 'streetwear-flannel',
-    name: 'Streetwear Plaid Overshirt (Showcase Frame)',
-    category: 'Shirt',
-    description: 'Vibrant flannel pattern with exterior watermark banners, social handles, and decorative background.',
-    hasWatermarkInDeadSpace: true,
-    hasWatermarkInsideUV: false,
-    thumbnailColor: '#f97316',
-    generate: () => generateStreetwearFlannelTemplate()
-  },
-  {
-    id: 'specops-vest',
-    name: 'Spec-Ops Combat Rig (Template Bleed)',
-    category: 'Shirt',
-    description: 'Tactical plate carrier with full-bleed camo pattern leaking into dead space, ready for 1-click clean.',
-    hasWatermarkInDeadSpace: true,
-    hasWatermarkInsideUV: true,
-    thumbnailColor: '#10b981',
-    generate: () => generateSpecOpsTemplate()
-  }
-];
+function drawTemplateExteriorMockup(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  label: string
+) {
+  // Background frame & template margins outside UV islands (so Auto-Clean can strip them cleanly)
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, width, height);
 
-function drawCheckerDeadSpace(ctx: CanvasRenderingContext2D, baseColor: string) {
-  // Fill the whole canvas with dirty showcase background
-  ctx.fillStyle = baseColor;
-  ctx.fillRect(0, 0, TEMPLATE_WIDTH, TEMPLATE_HEIGHT);
-
-  // Decorative cyber grid in dead space
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
   ctx.lineWidth = 1;
-  for (let x = 0; x < TEMPLATE_WIDTH; x += 20) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, TEMPLATE_HEIGHT);
-    ctx.stroke();
-  }
-  for (let y = 0; y < TEMPLATE_HEIGHT; y += 20) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(TEMPLATE_WIDTH, y);
-    ctx.stroke();
-  }
+  ctx.strokeRect(4.5, 4.5, width - 9, height - 9);
 
-  // Draw showcase decorative labels in dead space
+  // Subtle corner guide text strictly inside top-left exterior margin (clear of Torso Top at x=231)
+  ctx.fillStyle = 'rgba(148, 163, 184, 0.48)';
+  ctx.font = '600 9px monospace';
+  ctx.fillText('TEMPLATE GUIDE — STRIP BEFORE UPLOAD', 14, 22);
+  ctx.fillText(label.toUpperCase(), 14, 36);
+
+  // Diagonal exterior watermark lines outside UV islands
   ctx.save();
-  ctx.fillStyle = 'rgba(255, 50, 100, 0.85)';
-  ctx.font = 'bold 24px monospace';
-  ctx.fillText('⚡ SHOWCASE TEMPLATE ⚡', 150, 45);
-
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-  ctx.font = '12px monospace';
-  ctx.fillText('© 2026 CYBER_ASSET_LAB • DO NOT REUPLOAD', 160, 60);
-
-  // Big diagonal watermark across dead space (and bleeding across)
-  ctx.rotate(-0.25);
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
-  ctx.font = '900 38px sans-serif';
-  ctx.fillText('WATERMARK SAMPLE ONLY', 30, 220);
-  ctx.fillText('WATERMARK SAMPLE ONLY', 60, 480);
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.14)';
+  ctx.lineWidth = 1;
+  for (let i = -200; i < width + 200; i += 36) {
+    ctx.beginPath();
+    ctx.moveTo(i, 0);
+    ctx.lineTo(i - 140, height);
+    ctx.stroke();
+  }
   ctx.restore();
-
-  // Draw skulls / decorative tags in corner dead space
-  ctx.fillStyle = 'rgba(255, 80, 80, 0.7)';
-  ctx.font = '18px monospace';
-  ctx.fillText('☠ DEAD SPACE SKULL', 30, 120);
-  ctx.fillText('☠ WATERMARK ZONE', 380, 30);
-  ctx.fillText('IG: @roblox_designer_official', 20, 260);
-  ctx.fillText('COMMISSIONS CLOSED', 360, 260);
-  ctx.fillText('ROBLOX 585x559 RAW ASSET', 200, 545);
 }
 
-function generateCyberHoodieTemplate(): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = TEMPLATE_WIDTH;
-  canvas.height = TEMPLATE_HEIGHT;
-  const ctx = canvas.getContext('2d')!;
+export const SAMPLE_TEMPLATES: SampleTemplateSpec[] = [
+  {
+    id: 'heavenly-tech-jacket',
+    name: 'Heavenly Tech Jacket',
+    description: 'Slate obsidian shell with cyan seam piping, cuffs & exterior guide margin',
+    type: 'shirt',
+    renderToCanvas: () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = TEMPLATE_WIDTH;
+      canvas.height = TEMPLATE_HEIGHT;
+      const ctx = canvas.getContext('2d')!;
 
-  // 1. Fill dirty background
-  drawCheckerDeadSpace(ctx, '#141822');
+      drawTemplateExteriorMockup(ctx, TEMPLATE_WIDTH, TEMPLATE_HEIGHT, 'Tech Shell Shirt');
 
-  // 2. Draw textures strictly on the UV islands
-  for (const island of ROBLOX_SHIRT_UV_ISLANDS) {
-    ctx.save();
-    // Clip to island
-    ctx.beginPath();
-    ctx.rect(island.x, island.y, island.w, island.h);
-    ctx.clip();
+      for (const island of ROBLOX_SHIRT_UV_ISLANDS) {
+        const { x, y, w, h, name } = island;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, y, w, h);
+        ctx.clip();
 
-    // Dark cyber fabric base
-    ctx.fillStyle = '#181b22';
-    ctx.fillRect(island.x, island.y, island.w, island.h);
+        // Base tailored slate fabric gradient
+        const grad = ctx.createLinearGradient(x, y, x, y + h);
+        grad.addColorStop(0, '#1e293b');
+        grad.addColorStop(0.55, '#111827');
+        grad.addColorStop(1, '#0b1120');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, y, w, h);
 
-    // Subtle fabric micro-texture
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-    for (let px = island.x; px < island.x + island.w; px += 4) {
-      for (let py = island.y; py < island.y + island.h; py += 4) {
-        if ((px + py) % 8 === 0) {
-          ctx.fillRect(px, py, 2, 2);
+        // Subtle woven micro-texture
+        ctx.fillStyle = 'rgba(255,255,255,0.025)';
+        for (let py = y + 2; py < y + h; py += 4) {
+          ctx.fillRect(x, py, w, 1);
+        }
+
+        // Hem ribbing at bottom of vertical panels
+        if (h === 128) {
+          ctx.fillStyle = '#090d16';
+          ctx.fillRect(x, y + h - 14, w, 14);
+          ctx.fillStyle = '#06b6d4';
+          ctx.fillRect(x, y + h - 15, w, 2);
+        }
+
+        // Torso Front: collar cutout, zipper placket, chest panels, pocket
+        if (name === 'Torso Front') {
+          // Transparent neck scoop so skin tone peeks through naturally
+          ctx.save();
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.beginPath();
+          ctx.ellipse(x + w / 2, y + 4, 24, 15, 0, 0, Math.PI);
+          ctx.fill();
+          ctx.restore();
+
+          // Collar trim
+          ctx.strokeStyle = '#334155';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.ellipse(x + w / 2, y + 4, 25, 16, 0, 0.08 * Math.PI, 0.92 * Math.PI);
+          ctx.stroke();
+
+          // Center weatherproof zipper
+          ctx.fillStyle = '#030712';
+          ctx.fillRect(x + w / 2 - 3, y + 18, 6, h - 32);
+          ctx.fillStyle = '#22d3ee';
+          ctx.fillRect(x + w / 2 - 1, y + 20, 2, h - 36);
+
+          // Chest yoke seam + cyan accent bar
+          ctx.fillStyle = '#273549';
+          ctx.fillRect(x + 8, y + 36, 46, 3);
+          ctx.fillRect(x + w - 54, y + 36, 46, 3);
+
+          // Minimal chest crest on wearer's left (viewer right)
+          ctx.strokeStyle = '#22d3ee';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x + 80, y + 48, 22, 16);
+          ctx.fillStyle = '#e2e8f0';
+          ctx.fillRect(x + 85, y + 54, 12, 4);
+
+          // Lower angled pockets
+          ctx.strokeStyle = '#475569';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x + 12, y + 78, 34, 24);
+          ctx.strokeRect(x + w - 46, y + 78, 34, 24);
+        }
+
+        // Torso Back: yoke, vertical spine seam, clean geometric emblem
+        if (name === 'Torso Back') {
+          ctx.fillStyle = '#273549';
+          ctx.fillRect(x + 10, y + 26, w - 20, 3);
+          ctx.fillStyle = '#06b6d4';
+          ctx.fillRect(x + w / 2 - 1, y + 29, 2, 78);
+
+          // Back geometric diamond emblem
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.moveTo(x + w / 2, y + 44);
+          ctx.lineTo(x + w / 2 + 22, y + 66);
+          ctx.lineTo(x + w / 2, y + 88);
+          ctx.lineTo(x + w / 2 - 22, y + 66);
+          ctx.closePath();
+          ctx.stroke();
+        }
+
+        // Arms: shoulder cap, bicep stripe, transparent hand area at bottom
+        if (island.group === 'right_arm' || island.group === 'left_arm') {
+          if (h === 128) {
+            // Shoulder reinforcement
+            ctx.fillStyle = '#273549';
+            ctx.fillRect(x, y, w, 24);
+
+            // Bicep accent band on outer/front sleeves
+            if (name.includes('Outer') || name.includes('Front')) {
+              ctx.fillStyle = '#06b6d4';
+              ctx.fillRect(x + 6, y + 34, w - 12, 4);
+              ctx.fillStyle = '#334155';
+              ctx.fillRect(x + 6, y + 42, w - 12, 2);
+            }
+
+            // Wrist cuff
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(x, y + h - 32, w, 10);
+            ctx.fillStyle = '#22d3ee';
+            ctx.fillRect(x, y + h - 32, w, 2);
+
+            // Clear hand region so avatar skin tone shows cleanly on hands
+            ctx.clearRect(x, y + h - 22, w, 22);
+          } else if (name.includes('Bottom')) {
+            // Hand palm base transparent so skin renders cleanly
+            ctx.clearRect(x, y, w, h);
+          }
+        }
+        ctx.restore();
+      }
+
+      return canvas;
+    }
+  },
+  {
+    id: 'alpine-plaid-overshirt',
+    name: 'Alpine Plaid Overshirt',
+    description: 'Deep navy & warm terracotta flannel plaid with buttoned front and rolled cuffs',
+    type: 'shirt',
+    renderToCanvas: () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = TEMPLATE_WIDTH;
+      canvas.height = TEMPLATE_HEIGHT;
+      const ctx = canvas.getContext('2d')!;
+
+      drawTemplateExteriorMockup(ctx, TEMPLATE_WIDTH, TEMPLATE_HEIGHT, 'Alpine Plaid Overshirt');
+
+      for (const island of ROBLOX_SHIRT_UV_ISLANDS) {
+        const { x, y, w, h, name } = island;
+
+        // Clip strictly to each UV island so plaid stripes never bleed across UV borders
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, y, w, h);
+        ctx.clip();
+
+        // Base deep indigo flannel
+        ctx.fillStyle = '#172554';
+        ctx.fillRect(x, y, w, h);
+
+        // Plaid horizontal & vertical bands (cleanly tiled inside the clipped UV rect)
+        for (let py = y; py < y + h; py += 24) {
+          ctx.fillStyle = 'rgba(194, 65, 12, 0.65)';
+          ctx.fillRect(x, py + 6, w, 8);
+          ctx.fillStyle = 'rgba(248, 250, 252, 0.25)';
+          ctx.fillRect(x, py + 18, w, 2);
+        }
+        for (let px = x; px < x + w; px += 24) {
+          ctx.fillStyle = 'rgba(194, 65, 12, 0.55)';
+          ctx.fillRect(px + 6, y, 8, h);
+          ctx.fillStyle = 'rgba(248, 250, 252, 0.22)';
+          ctx.fillRect(px + 18, y, 2, h);
+        }
+
+        if (name === 'Torso Front') {
+          // Open collar & inner cream tee
+          ctx.fillStyle = '#e2e8f0';
+          ctx.beginPath();
+          ctx.moveTo(x + w / 2 - 20, y);
+          ctx.lineTo(x + w / 2 + 20, y);
+          ctx.lineTo(x + w / 2, y + 26);
+          ctx.closePath();
+          ctx.fill();
+
+          // Button placket
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(x + w / 2 - 5, y + 20, 10, h - 20);
+          for (let by = y + 32; by < y + h - 8; by += 20) {
+            ctx.fillStyle = '#cbd5e1';
+            ctx.beginPath();
+            ctx.arc(x + w / 2, by, 2.6, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Twin buttoned chest pockets
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
+          ctx.fillRect(x + 14, y + 40, 32, 30);
+          ctx.fillRect(x + w - 46, y + 40, 32, 30);
+          ctx.strokeStyle = '#94a3b8';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(x + 14, y + 40, 32, 30);
+          ctx.strokeRect(x + w - 46, y + 40, 32, 30);
+        }
+
+        if ((island.group === 'right_arm' || island.group === 'left_arm') && h === 128) {
+          // Rolled sleeve cuff + bare forearm/hand
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(x, y + h - 40, w, 8);
+          ctx.clearRect(x, y + h - 32, w, 32);
+        } else if (name.includes('Bottom')) {
+          ctx.clearRect(x, y, w, h);
+        }
+
+        ctx.restore();
+      }
+
+      return canvas;
+    }
+  },
+  {
+    id: 'utility-cargo-trousers',
+    name: 'Utility Cargo Trousers',
+    description: 'Charcoal twill cargo pants with belt hardware, side pockets & studio sneakers',
+    type: 'pants',
+    renderToCanvas: () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = TEMPLATE_WIDTH;
+      canvas.height = TEMPLATE_HEIGHT;
+      const ctx = canvas.getContext('2d')!;
+
+      drawTemplateExteriorMockup(ctx, TEMPLATE_WIDTH, TEMPLATE_HEIGHT, 'Utility Cargo Pants');
+
+      for (const island of ROBLOX_PANTS_UV_ISLANDS) {
+        const { x, y, w, h, name } = island;
+
+        if (island.group === 'torso') {
+          // Keep upper torso transparent so shirts layer cleanly; draw belt/waistband on lower third
+          ctx.clearRect(x, y, w, h);
+          if (h === 128) {
+            ctx.fillStyle = '#1f2937';
+            ctx.fillRect(x, y + h - 30, w, 30);
+            // Webbing belt
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(x, y + h - 26, w, 10);
+            if (name === 'Torso Front') {
+              // Brushed steel buckle
+              ctx.fillStyle = '#94a3b8';
+              ctx.fillRect(x + w / 2 - 12, y + h - 27, 24, 12);
+              ctx.fillStyle = '#1e293b';
+              ctx.fillRect(x + w / 2 - 7, y + h - 24, 14, 6);
+            }
+          } else if (name === 'Torso Bottom') {
+            ctx.fillStyle = '#1f2937';
+            ctx.fillRect(x, y, w, h);
+          }
+          continue;
+        }
+
+        // Legs base charcoal twill
+        const grad = ctx.createLinearGradient(x, y, x, y + h);
+        grad.addColorStop(0, '#27303f');
+        grad.addColorStop(0.75, '#1e2430');
+        grad.addColorStop(1, '#151a23');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, y, w, h);
+
+        if (h === 128) {
+          // Knee articulation stitching
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(x + 6, y + 56);
+          ctx.lineTo(x + w - 6, y + 56);
+          ctx.moveTo(x + 6, y + 72);
+          ctx.lineTo(x + w - 6, y + 72);
+          ctx.stroke();
+
+          // Side cargo pocket on outer leg faces
+          if (name.includes('Outer')) {
+            ctx.fillStyle = '#1a202c';
+            ctx.fillRect(x + 10, y + 32, w - 20, 34);
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(x + 10, y + 32, w - 20, 34);
+            ctx.fillStyle = '#06b6d4';
+            ctx.fillRect(x + 14, y + 39, 14, 2);
+          }
+
+          // Studio sneakers at bottom 24px
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(x, y + h - 24, w, 16);
+          // Crisp off-white midsole
+          ctx.fillStyle = '#e2e8f0';
+          ctx.fillRect(x, y + h - 8, w, 8);
+          // Cyan heel / toe accent
+          ctx.fillStyle = '#06b6d4';
+          ctx.fillRect(x + 8, y + h - 14, w - 16, 2);
+        } else if (name.includes('Bottom')) {
+          // Sneaker outsole
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(x, y, w, h);
+          ctx.strokeStyle = '#334155';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x + 6, y + 6, w - 12, h - 12);
         }
       }
+
+      return canvas;
     }
+  },
+  {
+    id: 'heavenly-crest-tshirt',
+    name: 'Heavenly Crest Emblem',
+    description: '512 × 512 transparent front-chest emblem graphic for Classic T-Shirts',
+    type: 'tshirt',
+    renderToCanvas: () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = TSHIRT_SIZE;
+      canvas.height = TSHIRT_SIZE;
+      const ctx = canvas.getContext('2d')!;
 
-    if (island.name === 'Torso Front') {
-      // Draw neon cyber zipper & straps
-      ctx.fillStyle = '#0f1218';
-      ctx.fillRect(island.x + 30, island.y, 68, island.h);
+      ctx.clearRect(0, 0, TSHIRT_SIZE, TSHIRT_SIZE);
 
-      // Neon cyan accent lines
-      ctx.strokeStyle = '#00e5ff';
-      ctx.lineWidth = 3;
+      const cx = TSHIRT_SIZE / 2;
+      const cy = TSHIRT_SIZE / 2 - 12;
+
+      // Subtle architectural backdrop disc (semi-transparent dark navy)
+      ctx.fillStyle = 'rgba(11, 17, 32, 0.88)';
       ctx.beginPath();
-      ctx.moveTo(island.x + 40, island.y + 20);
-      ctx.lineTo(island.x + 40, island.y + 110);
-      ctx.moveTo(island.x + 88, island.y + 20);
-      ctx.lineTo(island.x + 88, island.y + 110);
-      ctx.stroke();
-
-      // Cyber graphic print in chest center
-      ctx.fillStyle = '#7000ff';
-      ctx.beginPath();
-      ctx.arc(island.x + 64, island.y + 55, 20, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 164, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#00e5ff';
-      ctx.font = 'bold 10px monospace';
-      ctx.fillText('CYBER-V', island.x + 42, island.y + 58);
+      // Outer thin cyan ring
+      ctx.strokeStyle = '#22d3ee';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 152, 0, Math.PI * 2);
+      ctx.stroke();
 
-      // A small watermark tag inside lower front torso for testing the manual eraser!
-      ctx.fillStyle = '#ef4444';
-      ctx.fillRect(island.x + 36, island.y + 104, 56, 16);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 9px monospace';
-      ctx.fillText('REV-WATERMARK', island.x + 38, island.y + 115);
-    } else if (island.name === 'Torso Back') {
-      // Large cyber emblem on back
-      ctx.strokeStyle = '#00e5ff';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(island.x + 28, island.y + 28, 72, 72);
-
-      ctx.fillStyle = '#00e5ff';
-      ctx.font = 'bold 14px monospace';
-      ctx.fillText('NEO // 07', island.x + 34, island.y + 70);
-    } else if (island.name.includes('Top')) {
-      // Shoulder seams
-      ctx.fillStyle = '#222733';
-      ctx.fillRect(island.x, island.y, island.w, island.h);
-      ctx.strokeStyle = '#00e5ff';
+      // Inner subtle slate ring
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.3)';
       ctx.lineWidth = 2;
-      ctx.strokeRect(island.x + 4, island.y + 4, island.w - 8, island.h - 8);
-    } else if (island.name.includes('Bottom')) {
-      // Hem / cuff
-      ctx.fillStyle = '#11141b';
-      ctx.fillRect(island.x, island.y, island.w, island.h);
-      ctx.fillStyle = '#00e5ff';
-      ctx.fillRect(island.x, island.y + island.h - 12, island.w, 12);
-    } else {
-      // Arms side/front/back: draw tactical straps
-      ctx.fillStyle = '#1e232e';
-      ctx.fillRect(island.x, island.y + 40, island.w, 18);
-      ctx.strokeStyle = '#00e5ff';
-      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(island.x, island.y + 40);
-      ctx.lineTo(island.x + island.w, island.y + 40);
+      ctx.arc(cx, cy, 134, 0, Math.PI * 2);
       ctx.stroke();
-    }
 
-    // High-contrast border to emphasize exact UV boundaries
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(island.x + 0.5, island.y + 0.5, island.w - 1, island.h - 1);
+      // Geometric diamond + horizon lines
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 92);
+      ctx.lineTo(cx + 88, cy);
+      ctx.lineTo(cx, cy + 92);
+      ctx.lineTo(cx - 88, cy);
+      ctx.closePath();
+      ctx.stroke();
 
-    ctx.restore();
-  }
+      // Inner cyan prism
+      ctx.fillStyle = '#06b6d4';
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 42);
+      ctx.lineTo(cx + 42, cy);
+      ctx.lineTo(cx, cy + 42);
+      ctx.lineTo(cx - 42, cy);
+      ctx.closePath();
+      ctx.fill();
 
-  return canvas;
-}
-
-function generateStreetwearFlannelTemplate(): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = TEMPLATE_WIDTH;
-  canvas.height = TEMPLATE_HEIGHT;
-  const ctx = canvas.getContext('2d')!;
-
-  // Fill dirty grunge showcase background
-  ctx.fillStyle = '#2a1a1f';
-  ctx.fillRect(0, 0, TEMPLATE_WIDTH, TEMPLATE_HEIGHT);
-
-  // Exterior watermark spam in dead space
-  ctx.fillStyle = 'rgba(255, 100, 100, 0.4)';
-  ctx.font = 'bold 22px monospace';
-  ctx.fillText('★★★ ORIGINAL STREETWEAR DROP ★★★', 80, 50);
-  ctx.fillText('EXCLUSIVE ROBLOX CLOTHING GANG', 90, 540);
-  ctx.fillText('NO LEAKS / NO STEALING', 20, 200);
-  ctx.fillText('DISCORD.GG/DESIGNERS', 360, 200);
-
-  // Plaid pattern inside islands
-  for (const island of ROBLOX_SHIRT_UV_ISLANDS) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(island.x, island.y, island.w, island.h);
-    ctx.clip();
-
-    // Base warm orange/red
-    ctx.fillStyle = '#c2410c';
-    ctx.fillRect(island.x, island.y, island.w, island.h);
-
-    // Dark brown/black plaid grid
-    ctx.fillStyle = '#1c1917';
-    for (let x = island.x; x < island.x + island.w; x += 16) {
-      ctx.fillRect(x, island.y, 6, island.h);
-    }
-    for (let y = island.y; y < island.y + island.h; y += 16) {
-      ctx.fillRect(island.x, y, island.w, 6);
-    }
-
-    // Yellow accent stripe
-    ctx.fillStyle = '#fbbf24';
-    for (let x = island.x + 10; x < island.x + island.w; x += 32) {
-      ctx.fillRect(x, island.y, 2, island.h);
-    }
-    for (let y = island.y + 10; y < island.y + island.h; y += 32) {
-      ctx.fillRect(island.x, y, island.w, 2);
-    }
-
-    if (island.name === 'Torso Front') {
-      // White inner shirt opening
+      // Clean studio typography below crest
       ctx.fillStyle = '#f8fafc';
-      ctx.beginPath();
-      ctx.moveTo(island.x + 44, island.y);
-      ctx.lineTo(island.x + 64, island.y + 60);
-      ctx.lineTo(island.x + 84, island.y);
-      ctx.fill();
+      ctx.font = '700 34px "Outfit", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('HEAVENLY', cx, TSHIRT_SIZE - 56);
 
-      // Buttons
-      ctx.fillStyle = '#334155';
-      ctx.beginPath();
-      ctx.arc(island.x + 64, island.y + 75, 4, 0, Math.PI * 2);
-      ctx.arc(island.x + 64, island.y + 95, 4, 0, Math.PI * 2);
-      ctx.arc(island.x + 64, island.y + 115, 4, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = '600 14px monospace';
+      ctx.fillText('STUDIO EDITION · 01', cx, TSHIRT_SIZE - 26);
+
+      return canvas;
     }
-
-    ctx.restore();
   }
-
-  return canvas;
-}
-
-function generateSpecOpsTemplate(): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = TEMPLATE_WIDTH;
-  canvas.height = TEMPLATE_HEIGHT;
-  const ctx = canvas.getContext('2d')!;
-
-  // Fill dirty olive military background with bleed everywhere
-  ctx.fillStyle = '#1c2417';
-  ctx.fillRect(0, 0, TEMPLATE_WIDTH, TEMPLATE_HEIGHT);
-
-  // Large camo blotches in dead space
-  ctx.fillStyle = '#2c3823';
-  ctx.beginPath();
-  ctx.arc(100, 100, 90, 0, Math.PI * 2);
-  ctx.arc(480, 80, 80, 0, Math.PI * 2);
-  ctx.arc(300, 500, 120, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = 'rgba(100, 200, 100, 0.4)';
-  ctx.font = 'bold 20px monospace';
-  ctx.fillText('TACTICAL SPEC-OPS RIG // CLASS-A', 110, 45);
-  ctx.fillText('DEV IDENT: UNIT_DELTA_09', 180, 545);
-
-  // Draw vest textures inside UV islands
-  for (const island of ROBLOX_SHIRT_UV_ISLANDS) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(island.x, island.y, island.w, island.h);
-    ctx.clip();
-
-    ctx.fillStyle = '#2b3624';
-    ctx.fillRect(island.x, island.y, island.w, island.h);
-
-    // Molle tactical straps
-    ctx.fillStyle = '#171e13';
-    for (let y = island.y + 10; y < island.y + island.h; y += 14) {
-      ctx.fillRect(island.x + 8, y, island.w - 16, 5);
-    }
-
-    if (island.name === 'Torso Front') {
-      // Plate carrier front
-      ctx.fillStyle = '#1e271a';
-      ctx.fillRect(island.x + 20, island.y + 20, island.w - 40, island.h - 40);
-
-      // American / Operator Patch
-      ctx.fillStyle = '#10b981';
-      ctx.fillRect(island.x + 40, island.y + 35, 48, 24);
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 9px monospace';
-      ctx.fillText('SPECIAL OPS', island.x + 42, island.y + 50);
-
-      // Interior watermark to test eraser
-      ctx.fillStyle = '#e11d48';
-      ctx.font = '8px monospace';
-      ctx.fillText('SAMPLE_MOLLE_WM', island.x + 28, island.y + 115);
-    }
-
-    ctx.restore();
-  }
-
-  return canvas;
-}
+];

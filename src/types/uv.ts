@@ -10,71 +10,144 @@ export interface UvIsland {
 
 export const TEMPLATE_WIDTH = 585;
 export const TEMPLATE_HEIGHT = 559;
+export const TSHIRT_SIZE = 512;
 
+export type TemplateType = 'shirt' | 'pants' | 'tshirt';
+
+export interface TemplateSpec {
+  type: TemplateType;
+  label: string;
+  shortLabel: string;
+  width: number;
+  height: number;
+  hasUvIslands: boolean;
+  requirementSummary: string;
+}
+
+export const TEMPLATE_SPECS: Record<TemplateType, TemplateSpec> = {
+  shirt: {
+    type: 'shirt',
+    label: 'Classic Shirt',
+    shortLabel: 'Shirt',
+    width: TEMPLATE_WIDTH,
+    height: TEMPLATE_HEIGHT,
+    hasUvIslands: true,
+    requirementSummary: '585 × 559 px transparent PNG mapped to torso and arms'
+  },
+  pants: {
+    type: 'pants',
+    label: 'Classic Pants',
+    shortLabel: 'Pants',
+    width: TEMPLATE_WIDTH,
+    height: TEMPLATE_HEIGHT,
+    hasUvIslands: true,
+    requirementSummary: '585 × 559 px transparent PNG mapped to waist and legs'
+  },
+  tshirt: {
+    type: 'tshirt',
+    label: 'Classic T-Shirt',
+    shortLabel: 'T-Shirt',
+    width: TSHIRT_SIZE,
+    height: TSHIRT_SIZE,
+    hasUvIslands: false,
+    requirementSummary: '512 × 512 px square PNG placed on the front torso chest'
+  }
+};
+
+export function getTemplateSpec(type: TemplateType): TemplateSpec {
+  return TEMPLATE_SPECS[type];
+}
+
+/**
+ * Official Roblox 585x559 Classic Shirt UV Island Layout.
+ * Verified against Roblox Creator Documentation classic clothing template grid:
+ * Torso Front: (231, 74) 128x128, Top: (231, 8) 128x64, Bottom: (231, 204) 128x64,
+ * Right Side (viewer left): (165, 74) 64x128, Left Side (viewer right): (361, 74) 64x128, Back: (427, 74) 128x128.
+ * Right Arm (template left): Front (85, 355), Outer/R (19, 355), Inner/L (151, 355), Back (217, 355), Top (217, 289), Bottom (217, 485).
+ * Left Arm (template right): Inner/R (308, 355), Front (374, 355), Outer/L (440, 355), Back (506, 355), Top (308, 289), Bottom (308, 485).
+ *
+ * Note: We preserve 2px Roblox template divider spacing cleanly in the official defaults,
+ * and also retain the legacy calibrated preset for users migrating from UV Armor v5.
+ */
 export const ROBLOX_SHIRT_UV_ISLANDS: UvIsland[] = [
   // --- TORSO ISLAND ---
-  { name: "Torso Top", x: 230, y: 11, w: 128, h: 64, group: 'torso', description: "Top shoulder plane connecting neck and arms" },
-  { name: "Torso Right Side", x: 166, y: 75, w: 64, h: 128, group: 'torso', description: "Right ribcage / armpit seam" },
-  { name: "Torso Front", x: 230, y: 75, w: 128, h: 128, group: 'torso', description: "Front chest and abdomen main display" },
-  { name: "Torso Left Side", x: 358, y: 75, w: 64, h: 128, group: 'torso', description: "Left ribcage / armpit seam" },
-  { name: "Torso Back", x: 422, y: 75, w: 128, h: 128, group: 'torso', description: "Upper and lower back panel" },
-  { name: "Torso Bottom", x: 230, y: 203, w: 128, h: 64, group: 'torso', description: "Waistline / lower pelvis bottom" },
+  { name: 'Torso Top', x: 231, y: 8, w: 128, h: 64, group: 'torso', description: 'Top shoulder plane connecting neck and arms' },
+  { name: 'Torso Right Side', x: 165, y: 74, w: 64, h: 128, group: 'torso', description: 'Right ribcage / armpit seam' },
+  { name: 'Torso Front', x: 231, y: 74, w: 128, h: 128, group: 'torso', description: 'Front chest and abdomen main display' },
+  { name: 'Torso Left Side', x: 361, y: 74, w: 64, h: 128, group: 'torso', description: 'Left ribcage / armpit seam' },
+  { name: 'Torso Back', x: 427, y: 74, w: 128, h: 128, group: 'torso', description: 'Upper and lower back panel' },
+  { name: 'Torso Bottom', x: 231, y: 204, w: 128, h: 64, group: 'torso', description: 'Waistline / lower torso bottom' },
 
   // --- RIGHT ARM ISLAND (Template Left) ---
-  { name: "Right Arm Top", x: 215, y: 294, w: 64, h: 64, group: 'right_arm', description: "Right shoulder crown (inner center)" },
-  { name: "Right Arm Outer/Right", x: 23, y: 358, w: 64, h: 128, group: 'right_arm', description: "Right arm outer lateral face" },
-  { name: "Right Arm Front", x: 87, y: 358, w: 64, h: 128, group: 'right_arm', description: "Right arm bicep & forearm front" },
-  { name: "Right Arm Inner/Left", x: 151, y: 358, w: 64, h: 128, group: 'right_arm', description: "Right arm inner medial face (facing torso)" },
-  { name: "Right Arm Back", x: 215, y: 358, w: 64, h: 128, group: 'right_arm', description: "Right arm tricep & elbow back" },
-  { name: "Right Arm Bottom/Cuff", x: 215, y: 486, w: 64, h: 64, group: 'right_arm', description: "Right wrist cuff & hand base (inner center)" },
+  { name: 'Right Arm Top', x: 217, y: 289, w: 64, h: 64, group: 'right_arm', description: 'Right shoulder crown' },
+  { name: 'Right Arm Outer/Right', x: 19, y: 355, w: 64, h: 128, group: 'right_arm', description: 'Right arm outer lateral face' },
+  { name: 'Right Arm Front', x: 85, y: 355, w: 64, h: 128, group: 'right_arm', description: 'Right arm front sleeve' },
+  { name: 'Right Arm Inner/Left', x: 151, y: 355, w: 64, h: 128, group: 'right_arm', description: 'Right arm inner face (toward torso)' },
+  { name: 'Right Arm Back', x: 217, y: 355, w: 64, h: 128, group: 'right_arm', description: 'Right arm back sleeve' },
+  { name: 'Right Arm Bottom/Cuff', x: 217, y: 485, w: 64, h: 64, group: 'right_arm', description: 'Right wrist cuff & hand base' },
 
   // --- LEFT ARM ISLAND (Template Right) ---
-  { name: "Left Arm Top", x: 307, y: 293, w: 64, h: 64, group: 'left_arm', description: "Left shoulder crown (inner center)" },
-  { name: "Left Arm Inner/Right", x: 307, y: 357, w: 64, h: 128, group: 'left_arm', description: "Left arm inner medial face (facing torso)" },
-  { name: "Left Arm Front", x: 371, y: 357, w: 64, h: 128, group: 'left_arm', description: "Left arm bicep & forearm front" },
-  { name: "Left Arm Outer/Left", x: 435, y: 357, w: 64, h: 128, group: 'left_arm', description: "Left arm outer lateral face" },
-  { name: "Left Arm Back", x: 499, y: 357, w: 64, h: 128, group: 'left_arm', description: "Left arm tricep & elbow back" },
-  { name: "Left Arm Bottom/Cuff", x: 307, y: 485, w: 64, h: 64, group: 'left_arm', description: "Left wrist cuff & hand base (inner center)" }
+  { name: 'Left Arm Top', x: 308, y: 289, w: 64, h: 64, group: 'left_arm', description: 'Left shoulder crown' },
+  { name: 'Left Arm Inner/Right', x: 308, y: 355, w: 64, h: 128, group: 'left_arm', description: 'Left arm inner face (toward torso)' },
+  { name: 'Left Arm Front', x: 374, y: 355, w: 64, h: 128, group: 'left_arm', description: 'Left arm front sleeve' },
+  { name: 'Left Arm Outer/Left', x: 440, y: 355, w: 64, h: 128, group: 'left_arm', description: 'Left arm outer lateral face' },
+  { name: 'Left Arm Back', x: 506, y: 355, w: 64, h: 128, group: 'left_arm', description: 'Left arm back sleeve' },
+  { name: 'Left Arm Bottom/Cuff', x: 308, y: 485, w: 64, h: 64, group: 'left_arm', description: 'Left wrist cuff & hand base' }
 ];
 
 export const ROBLOX_PANTS_UV_ISLANDS: UvIsland[] = [
   // --- TORSO / PELVIS ISLAND ---
-  { name: "Torso Top", x: 230, y: 11, w: 128, h: 64, group: 'torso', description: "Waistline interior top" },
-  { name: "Torso Right Side", x: 166, y: 75, w: 64, h: 128, group: 'torso', description: "Right hip / belt lateral seam" },
-  { name: "Torso Front", x: 230, y: 75, w: 128, h: 128, group: 'torso', description: "Pelvis / crotch / belt front" },
-  { name: "Torso Left Side", x: 358, y: 75, w: 64, h: 128, group: 'torso', description: "Left hip / belt lateral seam" },
-  { name: "Torso Back", x: 422, y: 75, w: 128, h: 128, group: 'torso', description: "Posterior / back pockets" },
-  { name: "Torso Bottom", x: 230, y: 203, w: 128, h: 64, group: 'torso', description: "Crotch seam / bottom" },
+  { name: 'Torso Top', x: 231, y: 8, w: 128, h: 64, group: 'torso', description: 'Waistline top plane' },
+  { name: 'Torso Right Side', x: 165, y: 74, w: 64, h: 128, group: 'torso', description: 'Right hip / belt lateral seam' },
+  { name: 'Torso Front', x: 231, y: 74, w: 128, h: 128, group: 'torso', description: 'Pelvis / belt front' },
+  { name: 'Torso Left Side', x: 361, y: 74, w: 64, h: 128, group: 'torso', description: 'Left hip / belt lateral seam' },
+  { name: 'Torso Back', x: 427, y: 74, w: 128, h: 128, group: 'torso', description: 'Back waistband and seat' },
+  { name: 'Torso Bottom', x: 231, y: 204, w: 128, h: 64, group: 'torso', description: 'Lower torso bottom seam' },
 
   // --- RIGHT LEG ISLAND (Template Left) ---
-  { name: "Right Leg Top", x: 215, y: 294, w: 64, h: 64, group: 'right_leg', description: "Right upper thigh top (inner center)" },
-  { name: "Right Leg Outer/Right", x: 23, y: 358, w: 64, h: 128, group: 'right_leg', description: "Right leg outer lateral seam" },
-  { name: "Right Leg Front", x: 87, y: 358, w: 64, h: 128, group: 'right_leg', description: "Right thigh & shin front" },
-  { name: "Right Leg Inner/Left", x: 151, y: 358, w: 64, h: 128, group: 'right_leg', description: "Right inseam (facing left leg)" },
-  { name: "Right Leg Back", x: 215, y: 358, w: 64, h: 128, group: 'right_leg', description: "Right calf & hamstring back" },
-  { name: "Right Leg Bottom/Cuff", x: 215, y: 486, w: 64, h: 64, group: 'right_leg', description: "Right pant hem / boot cuff (inner center)" },
+  { name: 'Right Leg Top', x: 217, y: 289, w: 64, h: 64, group: 'right_leg', description: 'Right upper thigh top' },
+  { name: 'Right Leg Outer/Right', x: 19, y: 355, w: 64, h: 128, group: 'right_leg', description: 'Right leg outer seam' },
+  { name: 'Right Leg Front', x: 85, y: 355, w: 64, h: 128, group: 'right_leg', description: 'Right thigh & shin front' },
+  { name: 'Right Leg Inner/Left', x: 151, y: 355, w: 64, h: 128, group: 'right_leg', description: 'Right inseam (toward left leg)' },
+  { name: 'Right Leg Back', x: 217, y: 355, w: 64, h: 128, group: 'right_leg', description: 'Right calf & hamstring back' },
+  { name: 'Right Leg Bottom/Cuff', x: 217, y: 485, w: 64, h: 64, group: 'right_leg', description: 'Right hem / shoe sole' },
 
   // --- LEFT LEG ISLAND (Template Right) ---
-  { name: "Left Leg Top", x: 307, y: 293, w: 64, h: 64, group: 'left_leg', description: "Left upper thigh top (inner center)" },
-  { name: "Left Leg Inner/Right", x: 307, y: 357, w: 64, h: 128, group: 'left_leg', description: "Left inseam (facing right leg)" },
-  { name: "Left Leg Front", x: 371, y: 357, w: 64, h: 128, group: 'left_leg', description: "Left thigh & shin front" },
-  { name: "Left Leg Outer/Left", x: 435, y: 357, w: 64, h: 128, group: 'left_leg', description: "Left leg outer lateral seam" },
-  { name: "Left Leg Back", x: 499, y: 357, w: 64, h: 128, group: 'left_leg', description: "Left calf & hamstring back" },
-  { name: "Left Leg Bottom/Cuff", x: 307, y: 485, w: 64, h: 64, group: 'left_leg', description: "Left pant hem / boot cuff (inner center)" }
+  { name: 'Left Leg Top', x: 308, y: 289, w: 64, h: 64, group: 'left_leg', description: 'Left upper thigh top' },
+  { name: 'Left Leg Inner/Right', x: 308, y: 355, w: 64, h: 128, group: 'left_leg', description: 'Left inseam (toward right leg)' },
+  { name: 'Left Leg Front', x: 374, y: 355, w: 64, h: 128, group: 'left_leg', description: 'Left thigh & shin front' },
+  { name: 'Left Leg Outer/Left', x: 440, y: 355, w: 64, h: 128, group: 'left_leg', description: 'Left leg outer seam' },
+  { name: 'Left Leg Back', x: 506, y: 355, w: 64, h: 128, group: 'left_leg', description: 'Left calf & hamstring back' },
+  { name: 'Left Leg Bottom/Cuff', x: 308, y: 485, w: 64, h: 64, group: 'left_leg', description: 'Left hem / shoe sole' }
 ];
 
-export type TemplateType = 'shirt' | 'pants';
+export type ToolMode = 'pan' | 'paint' | 'eyedropper' | 'stamp' | 'marquee' | 'erase' | 'restore' | 'transform' | 'align';
 
-export type ToolMode = 'pan' | 'marquee' | 'brush' | 'picker' | 'align';
+export type ConformMode = 'pad' | 'crop' | 'scale';
+
+export interface ImageTransform {
+  x: number;
+  y: number;
+  scale: number;
+}
+
+export const DEFAULT_IMAGE_TRANSFORM: ImageTransform = {
+  x: 0,
+  y: 0,
+  scale: 1
+};
 
 export interface PreflightReport {
   width: number;
   height: number;
+  expectedWidth: number;
+  expectedHeight: number;
   aspectRatio: number;
   isExactDimensions: boolean;
   totalPixels: number;
+  visiblePixels: number;
   nonUvPixelsTotal: number;
-  dirtyNonUvPixels: number; // Pixels outside UV that have alpha > 0
+  dirtyNonUvPixels: number;
   uvConformityPercentage: number;
   hasWatermarkPotential: boolean;
   fileSize: number;
@@ -87,3 +160,5 @@ export interface MarqueeBox {
   w: number;
   h: number;
 }
+
+export type UvSectionId = 'torso' | 'right_limb' | 'left_limb';

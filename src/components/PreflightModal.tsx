@@ -1,181 +1,193 @@
-import React, { useState } from 'react';
-import { AlertTriangle, CheckCircle, ArrowRight, ShieldCheck, RefreshCw, X } from 'lucide-react';
-import { TEMPLATE_WIDTH, TEMPLATE_HEIGHT } from '../types/uv';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion } from 'motion/react';
+import { AlertTriangle, Check, Maximize, Minimize, Move, X } from 'lucide-react';
+import { ConformMode, TemplateType, getTemplateSpec } from '../types/uv';
+import { computeConformRect } from '../utils/uvEngine';
 
-interface Props {
-  isOpen: boolean;
-  uploadedWidth: number;
-  uploadedHeight: number;
+interface PreflightModalProps {
+  image: HTMLImageElement;
   fileName: string;
-  onApplyResample: (mode: 'scale' | 'pad' | 'crop') => void;
+  fileSize: number;
+  templateType: TemplateType;
+  onConfirm: (mode: ConformMode) => void;
   onCancel: () => void;
 }
 
-export const PreflightModal: React.FC<Props> = ({
-  isOpen,
-  uploadedWidth,
-  uploadedHeight,
+const MODES: {
+  id: ConformMode;
+  title: string;
+  summary: string;
+  detail: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
+  {
+    id: 'pad',
+    title: 'Fit & Center (Pad)',
+    summary: 'Preserves full aspect ratio',
+    detail:
+      'Fits the entire image inside the target canvas with transparent margins. Best for logos and T-Shirts.',
+    icon: Minimize
+  },
+  {
+    id: 'crop',
+    title: 'Fill & Center-Crop',
+    summary: 'Fills frame without distortion',
+    detail: 'Scales uniformly to cover the canvas and trims overflow edges symmetrically.',
+    icon: Maximize
+  },
+  {
+    id: 'scale',
+    title: 'Stretch to Exact Size',
+    summary: 'Exact edge-to-edge remap',
+    detail:
+      'Resamples width and height independently to match the exact template grid. Best for slightly scaled 585×559 templates.',
+    icon: Move
+  }
+];
+
+export const PreflightModal: React.FC<PreflightModalProps> = ({
+  image,
   fileName,
-  onApplyResample,
+  fileSize,
+  templateType,
+  onConfirm,
   onCancel
 }) => {
-  const [selectedMode, setSelectedMode] = useState<'scale' | 'pad' | 'crop'>('scale');
+  const spec = getTemplateSpec(templateType);
+  const [selectedMode, setSelectedMode] = useState<ConformMode>(
+    templateType === 'tshirt' ? 'pad' : 'scale'
+  );
 
-  if (!isOpen) return null;
+  const previewRefs = useRef<Record<ConformMode, HTMLCanvasElement | null>>({
+    pad: null,
+    crop: null,
+    scale: null
+  });
 
-  const isExact = uploadedWidth === TEMPLATE_WIDTH && uploadedHeight === TEMPLATE_HEIGHT;
+  useEffect(() => {
+    const modes: ConformMode[] = ['pad', 'crop', 'scale'];
+    for (const mode of modes) {
+      const canvas = previewRefs.current[mode];
+      if (!canvas) continue;
+      canvas.width = spec.width;
+      canvas.height = spec.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) continue;
+      ctx.clearRect(0, 0, spec.width, spec.height);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      const rect = computeConformRect(
+        image.naturalWidth,
+        image.naturalHeight,
+        spec.width,
+        spec.height,
+        mode
+      );
+      ctx.drawImage(image, rect.sx, rect.sy, rect.sw, rect.sh, rect.dx, rect.dy, rect.dw, rect.dh);
+    }
+  }, [image, spec.width, spec.height]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150 overflow-y-auto">
-      <div className="relative w-full max-w-lg max-h-[92vh] flex flex-col bg-[#11141c] border border-[#ef4444]/40 rounded-2xl shadow-[0_0_50px_rgba(239,68,68,0.15)] overflow-hidden font-sans">
+    <div
+      className="fixed inset-0 z-50 bg-black/55 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="conform-modal-title"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        className="w-full max-w-3xl bg-h-surface border border-h-border rounded-3xl shadow-[0_24px_64px_rgba(15,23,42,0.18)] overflow-hidden flex flex-col max-h-[90vh] text-h-text"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 bg-[#161a24] border-b border-[#232936] flex-shrink-0">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-lg bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/20 flex-shrink-0">
-              <AlertTriangle className="w-5 h-5" />
+        <div className="px-5 py-4 border-b border-h-border-soft bg-h-surface-2 flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-amber-600 text-xs font-semibold">
+              <AlertTriangle className="w-4 h-4" />
+              <span>Dimension Mismatch Detected</span>
             </div>
-            <div>
-              <h3 className="text-sm sm:text-base font-bold text-white tracking-wide">
-                PRE-FLIGHT RESOLUTION ALERT
-              </h3>
-              <p className="text-[11px] sm:text-xs text-[#94a3b8] font-mono">
-                Roblox Classic templates require strictly 585 × 559 px
-              </p>
-            </div>
+            <h2 id="conform-modal-title" className="font-display text-lg font-bold text-h-text">
+              Conform Image to {spec.label} ({spec.width} × {spec.height} px)
+            </h2>
+            <p className="text-xs text-h-muted">
+              <span className="text-h-text font-semibold">{fileName}</span> is{' '}
+              <span className="font-mono font-semibold text-amber-400">
+                {image.naturalWidth} × {image.naturalHeight} px
+              </span>
+              {fileSize > 0 ? ` · ${(fileSize / 1024).toFixed(1)} KB` : ''}. Choose how to fit it
+              before editing:
+            </p>
           </div>
           <button
+            type="button"
             onClick={onCancel}
-            className="p-1 rounded-lg text-[#64748b] hover:text-white hover:bg-[#232936] transition"
+            className="p-1.5 rounded-xl text-h-muted hover:text-h-text hover:bg-h-surface-3 cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Content Body */}
-        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
-          {/* Comparison Cards */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 text-xs font-mono">
-            <div className="p-2.5 sm:p-3 rounded-xl bg-[#0c0e14] border border-[#ef4444]/30">
-              <span className="text-[#94a3b8] text-[10px] uppercase block mb-0.5">Uploaded Asset</span>
-              <div className="text-base sm:text-lg font-bold text-[#ef4444]">
-                {uploadedWidth} × {uploadedHeight} <span className="text-[10px]">px</span>
-              </div>
-              <span className="text-[10px] text-[#ef4444]/80 mt-0.5 block truncate" title={fileName}>
-                {fileName}
-              </span>
-            </div>
-
-            <div className="p-2.5 sm:p-3 rounded-xl bg-[#0c0e14] border border-[#00e5ff]/30">
-              <span className="text-[#94a3b8] text-[10px] uppercase block mb-0.5">Target Engine Spec</span>
-              <div className="text-base sm:text-lg font-bold text-[#00e5ff]">
-                585 × 559 <span className="text-[10px]">px</span>
-              </div>
-              <span className="text-[10px] text-[#00e5ff]/80 mt-0.5 block">
-                Roblox Classic Spec
-              </span>
-            </div>
-          </div>
-
-          <p className="text-[11px] sm:text-xs text-[#94a3b8] leading-relaxed">
-            Uploading an incorrect aspect ratio causes avatar texture tearing and upload rejection on Roblox Creator Hub. Select a conform engine option:
-          </p>
-
-          {/* Radio Options */}
-          <div className="space-y-2">
-            <label
-              onClick={() => setSelectedMode('scale')}
-              className={`flex items-start p-2.5 sm:p-3 rounded-xl border cursor-pointer transition ${
-                selectedMode === 'scale'
-                  ? 'bg-[#00e5ff]/10 border-[#00e5ff] text-white'
-                  : 'bg-[#151922] border-[#232936] text-[#94a3b8] hover:border-[#384252]'
-              }`}
-            >
-              <input
-                type="radio"
-                name="resample"
-                checked={selectedMode === 'scale'}
-                onChange={() => setSelectedMode('scale')}
-                className="mt-1 mr-2.5 sm:mr-3 accent-[#00e5ff]"
-              />
-              <div>
-                <div className="font-semibold text-xs flex flex-wrap items-center gap-1.5">
-                  <span className="text-white">Auto-Resample to 585 × 559 (Bicubic High-Q)</span>
-                  <span className="px-1.5 py-0.5 rounded text-[9px] bg-[#00e5ff]/20 text-[#00e5ff] font-mono">
-                    RECOMMENDED
-                  </span>
+        {/* 3 Live Preview Cards */}
+        <div className="p-5 overflow-y-auto grid grid-cols-1 md:grid-cols-3 gap-4">
+          {MODES.map((m) => {
+            const Icon = m.icon;
+            const active = selectedMode === m.id;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setSelectedMode(m.id)}
+                data-testid={`conform-mode-${m.id}`}
+                className={`text-left rounded-2xl border p-3 flex flex-col gap-3 transition-colors cursor-pointer ${
+                  active
+                    ? 'bg-h-surface-3 border-h-accent-border shadow-xs'
+                    : 'bg-h-surface-2 border-h-border hover:border-h-accent-border'
+                }`}
+              >
+                <div className="w-full aspect-square rounded-xl checkerboard-surface border border-h-border overflow-hidden flex items-center justify-center p-2">
+                  <canvas
+                    ref={(el) => {
+                      previewRefs.current[m.id] = el;
+                    }}
+                    className="max-w-full max-h-full object-contain"
+                  />
                 </div>
-                <div className="text-[10px] sm:text-[11px] text-[#64748b] mt-0.5">
-                  Scales the template smoothly to exact 585x559 dimensions with high-fidelity interpolation.
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-h-text flex items-center gap-1.5">
+                      <Icon className="w-3.5 h-3.5 text-h-accent-text" />
+                      {m.title}
+                    </span>
+                    {active && <Check className="w-3.5 h-3.5 text-h-accent-text shrink-0" />}
+                  </div>
+                  <p className="text-[11px] font-semibold text-h-accent-text">{m.summary}</p>
+                  <p className="text-[11px] text-h-muted leading-relaxed">{m.detail}</p>
                 </div>
-              </div>
-            </label>
-
-            <label
-              onClick={() => setSelectedMode('pad')}
-              className={`flex items-start p-2.5 sm:p-3 rounded-xl border cursor-pointer transition ${
-                selectedMode === 'pad'
-                  ? 'bg-[#00e5ff]/10 border-[#00e5ff] text-white'
-                  : 'bg-[#151922] border-[#232936] text-[#94a3b8] hover:border-[#384252]'
-              }`}
-            >
-              <input
-                type="radio"
-                name="resample"
-                checked={selectedMode === 'pad'}
-                onChange={() => setSelectedMode('pad')}
-                className="mt-1 mr-2.5 sm:mr-3 accent-[#00e5ff]"
-              />
-              <div>
-                <div className="font-semibold text-xs text-white">Pad / Center on 585 × 559 Transparent Canvas</div>
-                <div className="text-[10px] sm:text-[11px] text-[#64748b] mt-0.5">
-                  Preserves strict pixel aspect ratio and centers the graphic onto transparent 585x559 canvas boundaries without stretching.
-                </div>
-              </div>
-            </label>
-
-            <label
-              onClick={() => setSelectedMode('crop')}
-              className={`flex items-start p-2.5 sm:p-3 rounded-xl border cursor-pointer transition ${
-                selectedMode === 'crop'
-                  ? 'bg-[#00e5ff]/10 border-[#00e5ff] text-white'
-                  : 'bg-[#151922] border-[#232936] text-[#94a3b8] hover:border-[#384252]'
-              }`}
-            >
-              <input
-                type="radio"
-                name="resample"
-                checked={selectedMode === 'crop'}
-                onChange={() => setSelectedMode('crop')}
-                className="mt-1 mr-2.5 sm:mr-3 accent-[#00e5ff]"
-              />
-              <div>
-                <div className="font-semibold text-xs text-white">Center Crop to 585 × 559</div>
-                <div className="text-[10px] sm:text-[11px] text-[#64748b] mt-0.5">
-                  Crops excess border pixels from outer edges while retaining center coordinates.
-                </div>
-              </div>
-            </label>
-          </div>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Footer Actions */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 bg-[#141822] border-t border-[#232936] flex-shrink-0">
+        {/* Footer */}
+        <div className="px-5 py-3.5 border-t border-h-border-soft bg-h-surface-2 flex items-center justify-end gap-2.5">
           <button
+            type="button"
             onClick={onCancel}
-            className="px-3 py-2 text-xs font-semibold text-[#94a3b8] hover:text-white transition"
+            className="px-4 py-2 rounded-xl bg-h-surface hover:bg-h-surface-3 border border-h-border text-xs font-semibold text-h-text-2 cursor-pointer"
           >
             Cancel
           </button>
           <button
-            onClick={() => onApplyResample(selectedMode)}
-            className="flex items-center space-x-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-[#00e5ff] to-[#00b4d8] hover:from-[#00cce6] hover:to-[#0096c7] text-black text-xs font-bold rounded-xl shadow-lg transition active:scale-95"
+            type="button"
+            onClick={() => onConfirm(selectedMode)}
+            data-testid="conform-apply-btn"
+            className="px-4 py-2 rounded-xl bg-h-accent hover:bg-h-accent-hover text-white text-xs font-semibold cursor-pointer shadow-xs"
           >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Apply Conform</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            Import with {MODES.find((m) => m.id === selectedMode)?.title}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

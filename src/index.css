@@ -1,1 +1,167 @@
 @import "tailwindcss";
+
+@theme inline {
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-h-canvas: var(--h-canvas);
+  --color-h-surface: var(--h-surface);
+  --color-h-surface-2: var(--h-surface-2);
+  --color-h-surface-3: var(--h-surface-3);
+  --color-h-border: var(--h-border);
+  --color-h-border-soft: var(--h-border-soft);
+  --color-h-text: var(--h-text);
+  --color-h-text-2: var(--h-text-2);
+  --color-h-muted: var(--h-muted);
+  --color-h-accent: var(--h-accent);
+  --color-h-accent-hover: var(--h-accent-hover);
+  --color-h-accent-text: var(--h-accent-text);
+  --color-h-accent-soft: var(--h-accent-soft);
+  --color-h-accent-border: var(--h-accent-border);
+}
+
+/* ================= HEAVENLY DARK (DEFAULT) ================= */
+:root,
+:root[data-theme="dark"] {
+  --h-canvas: #0a1120;
+  --h-surface: #111c31;
+  --h-surface-2: #16243d;
+  --h-surface-3: #1e3152;
+  --h-border: #253a5e;
+  --h-border-soft: #1b2c4a;
+  --h-text: #f0f6ff;
+  --h-text-2: #cbd9ee;
+  --h-muted: #8aa3c7;
+  --h-accent: #0ea5e9;
+  --h-accent-hover: #38bdf8;
+  --h-accent-text: #7dd3fc;
+  --h-accent-soft: #13304d;
+  --h-accent-border: #38bdf8;
+  --h-scrim: rgba(4, 9, 20, 0.56);
+  color-scheme: dark;
+}
+
+/* ================= HEAVENLY LIGHT (OPTIONAL TOGGLE) ================= */
+:root[data-theme="light"] {
+  --h-canvas: #f5f9ff;
+  --h-surface: #ffffff;
+  --h-surface-2: #f8fbff;
+  --h-surface-3: #edf4fe;
+  --h-border: #d6e4f7;
+  --h-border-soft: #e2ecf9;
+  --h-text: #0f172a;
+  --h-text-2: #334155;
+  --h-muted: #64748b;
+  --h-accent: #0284c7;
+  --h-accent-hover: #0369a1;
+  --h-accent-text: #0369a1;
+  --h-accent-soft: #e0f2fe;
+  --h-accent-border: #7dd3fc;
+  --h-scrim: rgba(15, 23, 42, 0.24);
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: var(--h-canvas);
+  color: var(--h-text);
+  font-family: var(--font-sans);
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono-tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Visible accessible keyboard focus ring */
+*:focus-visible {
+  outline: 2px solid var(--h-accent-border);
+  outline-offset: 2px;
+}
+
+/* Soft airy scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(125, 211, 252, 0.22);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(125, 211, 252, 0.4);
+}
+:root[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(14, 116, 144, 0.16);
+}
+:root[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(14, 116, 144, 0.3);
+}
+
+/* Transparency checkerboard for 2D canvas and thumbnails */
+.checkerboard-surface {
+  background-color: #131f36;
+  background-image:
+    linear-gradient(45deg, #1b2b49 25%, transparent 25%),
+    linear-gradient(-45deg, #1b2b49 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #1b2b49 75%),
+    linear-gradient(-45deg, transparent 75%, #1b2b49 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+}
+
+:root[data-theme="light"] .checkerboard-surface {
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(45deg, #e8f1fb 25%, transparent 25%),
+    linear-gradient(-45deg, #e8f1fb 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e8f1fb 75%),
+    linear-gradient(-45deg, transparent 75%, #e8f1fb 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+}
+
+/* Soft heavenly ambient wash behind the 2D artboard */
+.heavenly-editor-bg {
+  background-color: #0b1426;
+  background-image:
+    radial-gradient(circle at 20% 15%, rgba(56, 189, 248, 0.11) 0%, transparent 48%),
+    radial-gradient(circle at 82% 85%, rgba(129, 140, 248, 0.1) 0%, transparent 45%),
+    radial-gradient(rgba(148, 184, 232, 0.16) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 22px 22px;
+}
+
+:root[data-theme="light"] .heavenly-editor-bg {
+  background-color: #eef5fe;
+  background-image:
+    radial-gradient(circle at 20% 15%, rgba(186, 230, 253, 0.55) 0%, transparent 48%),
+    radial-gradient(circle at 82% 85%, rgba(224, 231, 255, 0.55) 0%, transparent 45%),
+    radial-gradient(#cbdcf2 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 22px 22px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
